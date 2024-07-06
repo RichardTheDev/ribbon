@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Translate Text</title>
+    <script>
+        Office.onReady((info) => {
+            if (info.host === Office.HostType.Outlook) {
+                document.getElementById("translate-button").onclick = translateText;
+            }
+        });
+
+        async function translateText() {
+            try {
+                const item = Office.context.mailbox.item;
+                const selectedData = await new Promise((resolve, reject) => {
+                    item.getSelectedDataAsync(Office.CoercionType.Text, (result) => {
+                        if (result.status === Office.AsyncResultStatus.Succeeded) {
+                            resolve(result);
+                        } else {
+                            reject(result.error);
+                        }
+                    });
+                });
+                
+                const selectedText = selectedData.value;
+
+                const response = await fetch('https://api.anthropic.com/v1/messages', {
+                    method: 'POST',
+                    headers: {
+                        'x-api-key': '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',
+                        'anthropic-version': '2023-06-01',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: 'claude-3-5-sonnet-20240620',
+                        max_tokens: 1024,
+                        messages: [
+                            { role: 'user', content: `Translate this text in Hebrew, return only the translation: ${selectedText}` }
+                        ]
+                    })
+                });
+
+                const result = await response.json();
+                const translatedText = result.choices[0].message.content;
+
+                // Replace the selected text with the translated text
+                await new Promise((resolve, reject) => {
+                    item.body.setSelectedDataAsync(translatedText, { coercionType: Office.CoercionType.Text }, (result) => {
+                        if (result.status === Office.AsyncResultStatus.Succeeded) {
+                            resolve();
+                        } else {
+                            reject(result.error);
+                        }
+                    });
+                });
+
+            } catch (error) {
+                console.error('Error translating text:', error);
+            }
+        }
+    </script>
+</head>
+<body>
+    <button id="translate-button">Translate Text</button>
+</body>
+</html>
