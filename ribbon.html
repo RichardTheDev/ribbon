@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html>
 <head>
     <title>Translate Text</title>
@@ -63,4 +63,59 @@
 <body>
     <button id="translate-button">Translate Text</button>
 </body>
+</html> -->
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Translate Email</title>
+  <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+  <script>
+    Office.onReady(info => {
+      if (info.host === Office.HostType.Outlook) {
+        document.getElementById('translateButton').onclick = translateEmail;
+      }
+    });
+
+    function translateEmail() {
+      Office.context.mailbox.item.body.getAsync(Office.CoercionType.Text, (result) => {
+        if (result.status === Office.AsyncResultStatus.Failed) {
+          console.error(result.error.message);
+          return;
+        }
+
+        const emailText = result.value;
+        const apiUrl = 'https://us-central1-auditex-b2a31.cloudfunctions.net/function-1-test';
+        const requestData = {
+          text: emailText
+        };
+
+        fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(requestData)
+        })
+          .then(response => response.json())
+          .then(data => {
+            const translatedText = data.translation;
+            Office.context.mailbox.item.body.setAsync(translatedText, { coercionType: Office.CoercionType.Text }, (result) => {
+              if (result.status === Office.AsyncResultStatus.Failed) {
+                console.error(result.error.message);
+              } else {
+                console.log('Email translated successfully');
+              }
+            });
+          })
+          .catch(error => {
+            console.error('Error translating email:', error);
+          });
+      });
+    }
+  </script>
+</head>
+<body>
+  <button id="translateButton">Translate to French</button>
+</body>
 </html>
+
